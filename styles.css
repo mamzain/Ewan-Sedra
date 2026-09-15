@@ -1,0 +1,251 @@
+:root {
+  --cream: #fbf6ec;
+  --paper: #f6f2ea;
+  --accent: #c9ab77;
+  --olive-dark: #5f5c3f;
+  --ink: #0f0e0b;
+  --serif: 'Marcellus', serif;
+  --sans: 'Jost', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--sans);
+}
+
+img { max-width: none; -webkit-user-drag: none; user-select: none; }
+
+/* Fixed scroll box so browser bars can't change scene size mid-scroll; each scene is meant to be one screen. */
+#scroller {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+#journey:not([hidden]) { display: contents; }
+
+/* ---------- progress rail ---------- */
+#progress-rail {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(251,246,236,.18);
+  z-index: 500;
+}
+#progress-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--cream);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.15s linear;
+}
+/* While a transition clip covers the page, let the progress bar glide with it instead of snapping. */
+body.in-transition #progress-fill { transition: transform 0.55s linear; }
+
+/* ---------- camera transition clips (play over the page between two scenes) ---------- */
+.transition-video {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 400;
+  opacity: 0;
+  pointer-events: none;
+  /* Short dissolve so the scene's headline and dark overlay don't pop on or off. */
+  transition: opacity 0.12s linear;
+}
+.transition-video.playing { opacity: 1; }
+
+/* ---------- scenes ---------- */
+.scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.scene > .bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bg-overlay { opacity: 0; pointer-events: none; }
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(12,11,8,.62) 0%, rgba(12,11,8,.38) 24%, rgba(12,11,8,.1) 42%, rgba(12,11,8,0) 52%);
+}
+
+.copy {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  z-index: 3;
+  padding-left: 12px;
+  border-left: 1px solid rgba(251,246,236,.55);
+}
+.copy-raised { bottom: calc(76px + env(safe-area-inset-bottom)); }
+.copy h2 {
+  margin: 0;
+  font: 400 28px/1.15 var(--serif);
+  color: var(--cream);
+  text-wrap: balance;
+  text-shadow: 0 1px 20px rgba(0,0,0,.35);
+}
+.copy p {
+  margin: 8px 0 0;
+  max-width: 34ch;
+  font: 400 11.5px/1.6 var(--sans);
+  color: rgba(251,246,236,.92);
+  text-wrap: pretty;
+  text-shadow: 0 1px 12px rgba(0,0,0,.35);
+}
+
+/* Text rises in as each scene lands (only when the script is running, so it never stays hidden). */
+.js .scene .copy {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .8s ease .15s, transform .8s ease .15s;
+}
+.js .scene.is-active .copy {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- 1. logo ---------- */
+#scene-logo { background: var(--paper); }
+.logo-mark {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  width: 64%;
+  max-width: 420px;
+  height: auto;
+}
+.enter {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(44px + env(safe-area-inset-bottom));
+  text-align: center;
+  font: 500 9px/1 var(--sans);
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--olive-dark);
+}
+.enter i {
+  display: block;
+  width: 1px;
+  height: 34px;
+  margin: 16px auto 0;
+  background: var(--accent);
+}
+
+/* ---------- 2. masterplan ---------- */
+#masterplan-base-a { transition: opacity .6s ease; }
+#masterplan-base-a.visible { opacity: 1; }
+
+.tabs { display: flex; gap: 18px; margin-top: 14px; }
+.type-tab {
+  background: none;
+  border: 0;
+  padding: 0 0 6px;
+  font: 400 16px/1 var(--serif);
+  color: rgba(251,246,236,.72);
+  border-bottom: 1px solid transparent;
+  text-shadow: 0 1px 12px rgba(0,0,0,.45);
+  cursor: pointer;
+}
+.type-tab.active { color: var(--cream); border-bottom-color: var(--accent); }
+.note {
+  margin-top: 10px;
+  text-shadow: 0 0 3px rgba(0,0,0,.8), 0 1px 10px rgba(0,0,0,.6);
+  min-height: 14px;
+  font: 500 9px/1.4 var(--sans);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(251,246,236,.85);
+}
+
+/* ---------- 6. interior ---------- */
+#scene-interior { background: #000; }
+.pan-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* ---------- 8. courtyard ---------- */
+#scene-courtyard { touch-action: none; user-select: none; }
+
+/* Drag scenes: text sits on top of the picture but must not catch the finger. */
+#scene-interior .copy, #scene-courtyard .copy { pointer-events: none; }
+
+/* ---------- 9. floor plans ---------- */
+.plans > .bg { filter: brightness(.42) saturate(.85); }
+.plans .scrim { background: linear-gradient(to bottom, rgba(12,11,8,.35) 0%, rgba(12,11,8,.1) 40%, rgba(12,11,8,.45) 100%); }
+.plans .copy { bottom: auto; top: 20%; }
+.list { position: absolute; left: 24px; right: 24px; top: 47%; z-index: 3; }
+.list div { display: flex; align-items: baseline; gap: 14px; padding: 14px 0; border-top: 1px solid rgba(251,246,236,.22); }
+.list div:last-child { border-bottom: 1px solid rgba(251,246,236,.22); }
+.list em { font: 500 9px/1 var(--sans); font-style: normal; letter-spacing: .2em; color: var(--accent); }
+.list span { font: 400 17px/1 var(--serif); }
+.soon {
+  position: absolute;
+  left: 24px; right: 24px;
+  top: calc(47% + 158px);
+  z-index: 3;
+  font: 500 9px/1.5 var(--sans);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---------- drag sign (interior pan, courtyard day/night) ---------- */
+.drag-hint {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--cream);
+}
+.drag-hint svg {
+  width: 64px;
+  height: 24px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,.6));
+}
+.drag-hint path { opacity: .85; }
+.drag-hint .dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hint-sway 1.8s ease-in-out infinite;
+}
+@keyframes hint-sway {
+  0%, 100% { transform: translateX(-11px); }
+  50% { transform: translateX(11px); }
+}

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ewan Sedra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="progress-rail"><div id="progress-fill"></div></div>
+
+<video class="transition-video" id="t1-fwd" muted playsinline preload="auto" src="Transition%20-%20Facade%20To%20Close%20-%20Fast%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t1-rev" muted playsinline preload="auto" src="Transition%20-%20Facade%20To%20Close%20-%20Fast%20Reverse%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t2-fwd" muted playsinline preload="auto" src="CAM01%20to%2014%20Transition-Fast%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t2-rev" muted playsinline preload="auto" src="CAM01%20to%2014%20Transition-Fast%20Reverse%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t3-fwd" muted playsinline preload="auto" src="3rd%20Transition-Entrance%20to%20Interior%20-%20Fast%20Bent%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t3-rev" muted playsinline preload="auto" src="3rd%20Transition-Entrance%20to%20Interior%20-%20Fast%20Bent%20Reverse%20-%20Motion%20Blur.mp4"></video>
+
+<main id="scroller">
+
+  <!-- 1. LOGO -->
+  <section class="scene" id="scene-logo" data-n="1">
+    <img draggable="false" class="logo-mark" src="Ewan%20Sedra-Wordmark%20Logo-1.png" alt="Ewan Sedra">
+    <div class="enter">Scroll to enter<i></i></div>
+  </section>
+
+  <!-- 2. MASTERPLAN -->
+  <section class="scene" id="scene-masterplan" data-n="2">
+    <img draggable="false" class="bg" src="CAM11-OUTRO-BIRD-Original.jpg" alt="Ewan Sedra masterplan">
+    <img draggable="false" class="bg bg-overlay" id="masterplan-base-a" src="CAM11-OUTRO-BIRD-%20Type%20A%20Only.jpg" alt="Type A residences highlighted on the masterplan">
+    <div class="scrim"></div>
+    <div class="copy">
+      <h2>A private quarter, woven into the land</h2>
+      <p>Choose a residence to see where it rests.</p>
+      <div class="tabs">
+        <button class="type-tab" data-type="a">Type A</button>
+        <button class="type-tab" data-type="b">Type B</button>
+        <button class="type-tab" data-type="c">Type C</button>
+      </div>
+      <div class="note" id="type-note"></div>
+    </div>
+  </section>
+
+  <!-- scenes revealed after Type A is selected -->
+  <div id="journey" hidden>
+
+    <!-- 3. FACADE DAY -->
+    <section class="scene" id="scene-facade-day" data-n="3">
+      <video class="bg" muted loop playsinline preload="auto" poster="CAM59-Type%20A2-Front-Day-Poster.jpg" src="CAM59-Type%20A2-Front-Day.mp4"></video>
+      <div class="scrim"></div>
+      <div class="copy">
+        <h2>Stone, shaped by light</h2>
+        <p>Clean volumes and layered textures, composed to catch the sun.</p>
+      </div>
+    </section>
+
+    <!-- 4. FACADE CLOSE-UP -->
+    <section class="scene" id="scene-facade-close" data-n="4">
+      <video class="bg" muted loop playsinline preload="auto" poster="CAM01-CLOSE%20VILLA%20INTRO-Portrait-Poster.jpg" src="CAM01-CLOSE%20VILLA%20INTRO-portrait.mp4"></video>
+      <div class="scrim"></div>
+      <div class="copy">
+        <h2>Detail you can feel</h2>
+        <p>Ribbed stone and perforated bronze screens, crafted to be seen up close.</p>
+      </div>
+    </section>
+
+    <!-- 5. ENTRANCE -->
+    <section class="scene" id="scene-entrance" data-n="5">
+      <video class="bg" muted loop playsinline preload="auto" poster="CAM14-CLOSE%20TO%20VILLA%20ENTRANCE%20Portrait-Poster.jpg" src="CAM14-CLOSE%20TO%20VILLA%20ENTRANCE%20Portrait.mp4"></video>
+      <div class="scrim"></div>
+      <div class="copy">
+        <h2>An arrival,<br>framed in green</h2>
+        <p>Sculpted planting and a stepping-stone path lead you to the door.</p>
+      </div>
+    </section>
+
+    <!-- 6. INTERIOR — curved drag-to-look -->
+    <section class="scene" id="scene-interior" data-n="6">
+      <canvas class="pan-canvas" id="pan-canvas" aria-label="Interior living and dining, drag to look around"></canvas>
+      <div class="scrim"></div>
+      <div class="copy copy-raised">
+        <h2>Made for gathering</h2>
+        <p>Living and dining flow into one another, finished in rich, tactile materials.</p>
+      </div>
+      <div class="drag-hint" aria-hidden="true"><svg viewBox="0 0 64 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 3 12l6 6"/><path d="M55 6l6 6-6 6"/><circle class="dot" cx="32" cy="12" r="4.5" fill="currentColor" stroke="none"/></svg></div>
+    </section>
+
+    <!-- 7. ROOF TERRACE -->
+    <section class="scene" id="scene-terrace" data-n="7">
+      <video class="bg" muted loop playsinline preload="auto" poster="CAM17-Portrait-Poster.jpg" src="CAM17-Portrait.mp4"></video>
+      <div class="scrim"></div>
+      <div class="copy">
+        <h2>Above it all</h2>
+        <p>Evenings under an open sky, with the land stretching beyond.</p>
+      </div>
+    </section>
+
+    <!-- 8. COURTYARD — swipe sideways from day to night -->
+    <section class="scene" id="scene-courtyard" data-n="8">
+      <video class="bg" id="courtyard-day" muted loop playsinline preload="auto" poster="CAM15-Day-Portrait-Poster.jpg" src="CAM15-Day-Portrait.mp4"></video>
+      <video class="bg bg-overlay" id="courtyard-night" muted loop playsinline preload="auto" poster="CAM15-Day-Night-Poster.jpg" src="CAM15-Day-Night.mp4"></video>
+      <div class="scrim"></div>
+      <div class="copy copy-raised">
+        <h2>An open court, day into evening</h2>
+        <p>Grass and stone between the walls of home, glowing softly as night falls.</p>
+      </div>
+      <div class="drag-hint" aria-hidden="true"><svg viewBox="0 0 64 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 3 12l6 6"/><path d="M55 6l6 6-6 6"/><circle class="dot" cx="32" cy="12" r="4.5" fill="currentColor" stroke="none"/></svg></div>
+    </section>
+
+    <!-- 9. FLOOR PLANS -->
+    <section class="scene plans" id="scene-plans" data-n="9">
+      <img draggable="false" class="bg" src="CAM60-Type%20A2-Front-Night-Poster.jpg" alt="">
+      <div class="scrim"></div>
+      <div class="copy">
+        <h2>Every room, considered</h2>
+        <p>Three levels, from garden to sky.</p>
+      </div>
+      <div class="list">
+        <div><em>01</em><span>Ground floor</span></div>
+        <div><em>02</em><span>First floor</span></div>
+        <div><em>03</em><span>Roof terrace</span></div>
+      </div>
+      <div class="soon">Plans unveiling soon</div>
+    </section>
+
+    <!-- 10. CLOSING -->
+    <section class="scene" id="scene-closing" data-n="10">
+      <video class="bg" muted loop playsinline preload="auto" poster="CAM60-Type%20A2-Front-Night-Poster.jpg" src="CAM60-Type%20A2-Front-Night.mp4"></video>
+      <div class="scrim"></div>
+      <div class="copy">
+        <h2>Ewan Sedra</h2>
+        <p>A home designed to be lived in slowly.</p>
+      </div>
+    </section>
+
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
