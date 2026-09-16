@@ -36,10 +36,12 @@ let activeScene = document.getElementById('scene-logo');
 // frame appears instantly on swipe. iOS often skips preloading until a gesture.
 let clipsWarmed = false;
 function warmTransitionClips() {
-  // Each listener below is `once` on its own, so guard against the other two firing later.
-  if (clipsWarmed) return;
+  // Needs one touch first (iOS); after that every arrival warms its own clips.
   clipsWarmed = true;
-  const ids = [...new Set(Object.values(TRANSITIONS))];
+  const ids = Object.entries(TRANSITIONS)
+    .filter(([key]) => key.startsWith(activeScene.id + '>'))
+    .map(([, id]) => id);
+  if (!ids.length) return;
   (function warmNext(i) {
     const clip = document.getElementById(ids[i]);
     if (!clip) return i + 1 < ids.length && warmNext(i + 1);
@@ -78,6 +80,23 @@ const visibleScenes = () =>
 
 const sceneVideos = scene => [...scene.querySelectorAll('video.bg')];
 
+// Load a video only when it's about to be needed: phones stall when asked to fetch and
+// decode every video on the page at once.
+function primeVideo(v) {
+  if (!v || v.preload === 'auto') return;
+  v.preload = 'auto';
+  if (v.readyState === 0) v.load();
+}
+// The scene you're on, the ones either side of it, and the transition clips out of it.
+function primeAround(scene) {
+  const scenes = visibleScenes();
+  const i = scenes.indexOf(scene);
+  [scenes[i - 1], scene, scenes[i + 1]].forEach(s => { if (s) sceneVideos(s).forEach(primeVideo); });
+  Object.entries(TRANSITIONS).forEach(([key, id]) => {
+    if (key.startsWith(scene.id + '>')) primeVideo(document.getElementById(id));
+  });
+}
+
 function onFirstFrame(video, cb) {
   if ('requestVideoFrameCallback' in video) video.requestVideoFrameCallback(() => cb());
   else {
@@ -103,7 +122,16 @@ function setActive(target) {
   scroller.querySelectorAll('.scene.is-active').forEach(s => { if (s !== target) s.classList.remove('is-active'); });
   target.classList.add('is-active');
   progressFill.style.transform = 'scaleX(' + (+target.dataset.n || 0) / 10 + ')';
+  // Load first: an arrival handler may ask a video to play, and a later load() would cancel that.
+  primeAround(target);
   target.dispatchEvent(new CustomEvent('scene:enter'));
+  // Once the transition or slide has really finished, decode the clips that can play next.
+  const warmWhenSettled = () => {
+    if (activeScene !== target || !clipsWarmed) return;
+    if (paging) return setTimeout(warmWhenSettled, 250);
+    warmTransitionClips();
+  };
+  setTimeout(warmWhenSettled, 400);
 }
 
 function slideTo(target) {
@@ -520,12 +548,7 @@ tabs.forEach(tab => {
   let amount = 0;
   let startAmount = 0;
 
-  // Arrive on day every visit.
-  section.addEventListener('scene:enter', () => {
-    section.dataset.goal = 'day';
-    amount = 0;
-    night.style.opacity = 0;
-  });
+  // No reset on arrival: the courtyard stays on whichever day/night it was left.
 
   // Day and night are two videos of the same shot: keep them on the same frame.
   const day = document.getElementById('courtyard-day');
@@ -651,8 +674,8 @@ tabs.forEach(tab => {
 })();
 
 // ---- scene 9: floor plans, swipe sideways floor to floor ----
-// Ground, First, Roof sit side by side. The page follows the finger, then snaps to the
-// next floor (or back) when it lets go. The Ground/First/Roof bar can be tapped too.
+// Ground, First, Roof sit side by side, right to left. The page follows the finger, then
+// snaps to the next floor (or back) when it lets go; swiping right moves on. The Ground/First/Roof bar can be tapped too.
 (function floorPlans() {
   const scene = document.getElementById('scene-plans');
   const track = scene && scene.querySelector('.floors');
@@ -665,7 +688,7 @@ tabs.forEach(tab => {
   const show = i => {
     index = Math.max(0, Math.min(count - 1, i));
     track.style.transition = '';
-    track.style.transform = 'translateX(' + (-index * 100) + '%)';
+    track.style.transform = 'translateX(' + (index * 100) + '%)';
     tabs.forEach((t, k) => {
       t.classList.toggle('on', k === index);
       t.setAttribute('aria-selected', k === index ? 'true' : 'false');
@@ -682,13 +705,14 @@ tabs.forEach(tab => {
     onMove: dx => {
       lastDx = dx;
       // Past the first or last floor it only gives a little, so it's clear there's no more.
-      const edge = (index === 0 && dx > 0) || (index === count - 1 && dx < 0);
-      track.style.transform = 'translateX(calc(' + (-index * 100) + '% + ' + (edge ? dx * 0.25 : dx) + 'px))';
+      const edge = (index === 0 && dx < 0) || (index === count - 1 && dx > 0);
+      track.style.transform = 'translateX(calc(' + (index * 100) + '% + ' + (edge ? dx * 0.25 : dx) + 'px))';
     },
     onEnd: speed => {
       const far = Math.abs(lastDx) > scene.clientWidth * 0.18;
       const flick = Math.abs(speed) > 0.35;
-      if (far || flick) show(index + ((flick ? speed : lastDx) < 0 ? 1 : -1));
+      // Swiping right brings the next floor in from the left.
+      if (far || flick) show(index + ((flick ? speed : lastDx) > 0 ? 1 : -1));
       else show(index);
     },
   });
@@ -696,8 +720,8 @@ tabs.forEach(tab => {
   tabs.forEach((t, k) => t.addEventListener('click', () => show(k)));
   window.addEventListener('keydown', e => {
     if (activeScene !== scene) return;
-    if (e.key === 'ArrowRight') show(index + 1);
-    if (e.key === 'ArrowLeft') show(index - 1);
+    if (e.key === 'ArrowLeft') show(index + 1);
+    if (e.key === 'ArrowRight') show(index - 1);
   });
 })();
 
