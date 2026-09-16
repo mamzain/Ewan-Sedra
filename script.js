@@ -227,18 +227,33 @@ function goTo(index) {
     if (from.resumeAfterPark) from.resumeAfterPark();
     return;
   }
+  if (from.id === 'scene-courtyard' && target.id === 'scene-plans') {
+    const night = document.getElementById('courtyard-night');
+    const goal = from.dataset.goal
+      || (night && parseFloat(getComputedStyle(night).opacity) > 0.5 ? 'night' : 'day');
+    // Switch at once, not with the fade, so the page never slides in mid-change.
+    target.classList.add('instant');
+    target.dataset.time = goal;
+    void target.offsetWidth;
+    requestAnimationFrame(() => target.classList.remove('instant'));
+  }
   activeScene = target;
   updateNativeGestures();
   setActive(target);
   paging = true;
 
+  if (from.leaveHook) from.leaveHook();
   const parked = from.parkOnFirstFrame ? from.parkOnFirstFrame() : null;
   const clip = document.getElementById(TRANSITIONS[from.id + '>' + target.id] || '');
   if (clip) playTransition(clip, target, parked);
   else slideTo(target);
 }
 
-const step = dir => goTo(visibleScenes().indexOf(activeScene) + dir);
+const step = dir => {
+  // A scene can take the step itself first (the closing page fades sunset into night).
+  if (!paging && activeScene.takeStep && activeScene.takeStep(dir)) return;
+  goTo(visibleScenes().indexOf(activeScene) + dir);
+};
 
 // Touch: fire as soon as the finger has moved far enough vertically, not on release.
 let touch = null;
@@ -386,7 +401,7 @@ tabs.forEach(tab => {
   if (!scene || !canvas) return;
   const ctx = canvas.getContext('2d');
   const img = new Image();
-  img.src = 'CAM07-INTERIOR%20RECEPTION%202%20(00180).jpg';
+  img.src = 'Scenes/CAM07-INTERIOR%20RECEPTION%202%20(00180).jpg';
 
   const HALF = 0.5; // half the horizontal field of view, in radians
   const TAN_HALF = Math.tan(HALF);
@@ -507,6 +522,7 @@ tabs.forEach(tab => {
 
   // Arrive on day every visit.
   section.addEventListener('scene:enter', () => {
+    section.dataset.goal = 'day';
     amount = 0;
     night.style.opacity = 0;
   });
@@ -529,6 +545,7 @@ tabs.forEach(tab => {
   let settleRaf = 0;
   const stopSettle = () => { if (settleRaf) cancelAnimationFrame(settleRaf); settleRaf = 0; };
   function settleTo(end) {
+    section.dataset.goal = end ? 'night' : 'day';
     const from = amount;
     const started = performance.now();
     const run = now => {
@@ -630,6 +647,101 @@ tabs.forEach(tab => {
       video.currentTime = 0;
       video.play().catch(() => {});
     });
+  });
+})();
+
+// ---- scene 9: floor plans, swipe sideways floor to floor ----
+// Ground, First, Roof sit side by side. The page follows the finger, then snaps to the
+// next floor (or back) when it lets go. The Ground/First/Roof bar can be tapped too.
+(function floorPlans() {
+  const scene = document.getElementById('scene-plans');
+  const track = scene && scene.querySelector('.floors');
+  if (!track) return;
+  const count = track.children.length;
+  const tabs = [...scene.querySelectorAll('.floor-tab')];
+  let index = 0;
+  let lastDx = 0;
+
+  const show = i => {
+    index = Math.max(0, Math.min(count - 1, i));
+    track.style.transition = '';
+    track.style.transform = 'translateX(' + (-index * 100) + '%)';
+    tabs.forEach((t, k) => {
+      t.classList.toggle('on', k === index);
+      t.setAttribute('aria-selected', k === index ? 'true' : 'false');
+      t.tabIndex = k === index ? 0 : -1;
+    });
+    [...track.children].forEach((f, k) => {
+      f.toggleAttribute('inert', k !== index);
+      f.setAttribute('aria-hidden', k === index ? 'false' : 'true');
+    });
+  };
+
+  sideDrag(scene, {
+    onStart: () => { lastDx = 0; track.style.transition = 'none'; },
+    onMove: dx => {
+      lastDx = dx;
+      // Past the first or last floor it only gives a little, so it's clear there's no more.
+      const edge = (index === 0 && dx > 0) || (index === count - 1 && dx < 0);
+      track.style.transform = 'translateX(calc(' + (-index * 100) + '% + ' + (edge ? dx * 0.25 : dx) + 'px))';
+    },
+    onEnd: speed => {
+      const far = Math.abs(lastDx) > scene.clientWidth * 0.18;
+      const flick = Math.abs(speed) > 0.35;
+      if (far || flick) show(index + ((flick ? speed : lastDx) < 0 ? 1 : -1));
+      else show(index);
+    },
+  });
+
+  tabs.forEach((t, k) => t.addEventListener('click', () => show(k)));
+  window.addEventListener('keydown', e => {
+    if (activeScene !== scene) return;
+    if (e.key === 'ArrowRight') show(index + 1);
+    if (e.key === 'ArrowLeft') show(index - 1);
+  });
+})();
+
+// ---- scene 10: closing, sunset fades into night in place ----
+(function closingSunset() {
+  const scene = document.getElementById('scene-closing');
+  if (!scene) return;
+  let lockedUntil = 0;
+  const resetWhenGone = () => setTimeout(() => {
+    if (activeScene === scene || scene.dataset.time === 'sunset') return;
+    scene.classList.add('instant');
+    scene.dataset.time = 'sunset';
+    void scene.offsetWidth;
+    requestAnimationFrame(() => scene.classList.remove('instant'));
+  }, PAGE_DURATION * 1000 + 100);
+  scene.leaveHook = resetWhenGone;
+  scene.takeStep = dir => {
+    // Ignore repeat steps while the fade runs, so one swipe is one change.
+    if (Date.now() < lockedUntil) return true;
+    if (dir > 0 && scene.dataset.time === 'sunset') { scene.dataset.time = 'night'; lockedUntil = Date.now() + 900; return true; }
+    if (dir < 0 && scene.dataset.time === 'night') { scene.dataset.time = 'sunset'; lockedUntil = Date.now() + 900; return true; }
+    return false;
+  };
+
+  // Back to types: fade to black, jump to the masterplan page, fade back in.
+  const button = scene.querySelector('.back-to-types');
+  const veil = document.getElementById('jump-veil');
+  const types = document.getElementById('scene-masterplan');
+  if (!button || !veil || !types) return;
+  button.addEventListener('click', () => {
+    if (paging) return;
+    paging = true;
+    veil.classList.add('on');
+    setTimeout(() => {
+      if (pageTl) { pageTl.kill(); pageTl = null; }
+      activeScene = types;
+      resetWhenGone();
+      scroller.scrollTop = types.offsetTop;
+      updateNativeGestures();
+      setActive(types);
+      pauseOtherVideos(types);
+      veil.classList.remove('on');
+      paging = false;
+    }, 380);
   });
 })();
 

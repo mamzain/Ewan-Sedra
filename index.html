@@ -11,27 +11,28 @@
 </head>
 <body>
 
+<div id="jump-veil" aria-hidden="true"></div>
 <div id="progress-rail"><div id="progress-fill"></div></div>
 
-<video class="transition-video" id="t1-fwd" muted playsinline preload="auto" src="1st%20Transiotion-Villa%20front%20to%20close%20-%20Fast%20-%20Motion%20Blur.mp4"></video>
-<video class="transition-video" id="t1-rev" muted playsinline preload="auto" src="1st%20Transiotion-Villa%20front%20to%20close%20-%20Fast%20Reverse%20-%20Motion%20Blur.mp4"></video>
-<video class="transition-video" id="t2-fwd" muted playsinline preload="auto" src="CAM01%20to%2014%20Transition-Fast%20-%20Motion%20Blur.mp4"></video>
-<video class="transition-video" id="t2-rev" muted playsinline preload="auto" src="CAM01%20to%2014%20Transition-Fast%20Reverse%20-%20Motion%20Blur.mp4"></video>
-<video class="transition-video" id="t3-fwd" muted playsinline preload="auto" src="3rd%20Transition-Entrance%20to%20Interior%20-%20Fast%20Bent%20-%20Motion%20Blur.mp4"></video>
-<video class="transition-video" id="t3-rev" muted playsinline preload="auto" src="3rd%20Transition-Entrance%20to%20Interior%20-%20Fast%20Bent%20Reverse%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t1-fwd" muted playsinline preload="auto" src="Transitions/1st%20Transition%20front%20to%20close%20-%20Fast%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t1-rev" muted playsinline preload="auto" src="Transitions/1st%20Transition%20front%20to%20close%20-%20Fast%20Reverse%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t2-fwd" muted playsinline preload="auto" src="Transitions/2nd%20Transition%20Close%20Elevation%20to%20close%20entrance%20-%20Fast%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t2-rev" muted playsinline preload="auto" src="Transitions/2nd%20Transition%20Close%20Elevation%20to%20close%20entrance%20-%20Fast%20Reverse%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t3-fwd" muted playsinline preload="auto" src="Transitions/3rd%20Transition%20Entrance%20to%20Interior%20-%20Fast%20Bent%20-%20Motion%20Blur.mp4"></video>
+<video class="transition-video" id="t3-rev" muted playsinline preload="auto" src="Transitions/3rd%20Transition%20Entrance%20to%20Interior%20-%20Fast%20Bent%20Reverse%20-%20Motion%20Blur.mp4"></video>
 
 <main id="scroller">
 
   <!-- 1. LOGO -->
   <section class="scene" id="scene-logo" data-n="1">
-    <img draggable="false" class="logo-mark" src="Ewan%20Sedra-Wordmark%20Logo-1.png" alt="Ewan Sedra">
+    <img draggable="false" class="logo-mark" src="Scenes/Ewan%20Sedra-Wordmark%20Logo-1.png" alt="Ewan Sedra">
     <div class="enter">Scroll to enter<i></i></div>
   </section>
 
   <!-- 2. MASTERPLAN -->
   <section class="scene" id="scene-masterplan" data-n="2">
-    <img draggable="false" class="bg" src="CAM11-OUTRO-BIRD-Original.jpg" alt="Ewan Sedra masterplan">
-    <img draggable="false" class="bg bg-overlay" id="masterplan-base-a" src="CAM11-OUTRO-BIRD-%20Type%20A%20Only.jpg" alt="Type A residences highlighted on the masterplan">
+    <img draggable="false" class="bg" src="Scenes/CAM11-OUTRO-BIRD-Original.jpg" alt="Ewan Sedra masterplan">
+    <img draggable="false" class="bg bg-overlay" id="masterplan-base-a" src="Scenes/CAM11-OUTRO-BIRD-%20Type%20A%20Only.jpg" alt="Type A residences highlighted on the masterplan">
     <div class="scrim"></div>
     <div class="copy">
       <h2>A private quarter, woven into the land</h2>
@@ -50,7 +51,7 @@
 
     <!-- 3. FACADE DAY -->
     <section class="scene" id="scene-facade-day" data-n="3">
-      <video class="bg" muted loop playsinline preload="auto" poster="CAM59-Type%20A2-Front-Day-Poster.jpg" src="CAM59-Type%20A2-Front-Day.mp4"></video>
+      <video class="bg" muted loop playsinline preload="auto" poster="Scenes/CAM59-Type%20A2-Front-Day-Poster.jpg" src="Scenes/CAM59-Type%20A2-Front-Day.mp4"></video>
       <div class="scrim"></div>
       <div class="copy">
         <h2>Stone, shaped by light</h2>
@@ -60,7 +61,7 @@
 
     <!-- 4. FACADE CLOSE-UP -->
     <section class="scene" id="scene-facade-close" data-n="4">
-      <video class="bg" muted loop playsinline preload="auto" poster="CAM01-CLOSE%20VILLA%20INTRO-Portrait-Poster.jpg" src="CAM01-CLOSE%20VILLA%20INTRO-portrait.mp4"></video>
+      <video class="bg" muted loop playsinline preload="auto" poster="Scenes/CAM-Entrance%20Close-Poster.jpg" src="Scenes/CAM-Entrance%20Close.mp4"></video>
       <div class="scrim"></div>
       <div class="copy">
         <h2>Detail you can feel</h2>
@@ -70,7 +71,7 @@
 
     <!-- 5. ENTRANCE -->
     <section class="scene" id="scene-entrance" data-n="5">
-      <video class="bg" muted loop playsinline preload="auto" poster="CAM14-CLOSE%20TO%20VILLA%20ENTRANCE%20Portrait-Poster.jpg" src="CAM14-CLOSE%20TO%20VILLA%20ENTRANCE%20Portrait.mp4"></video>
+      <video class="bg" muted loop playsinline preload="auto" poster="Scenes/CAM-Entrance%20Front-Poster.jpg" src="Scenes/CAM-Entrance%20Front.mp4"></video>
       <div class="scrim"></div>
       <div class="copy">
         <h2>An arrival,<br>framed in green</h2>
@@ -91,7 +92,7 @@
 
     <!-- 7. ROOF TERRACE -->
     <section class="scene" id="scene-terrace" data-n="7">
-      <video class="bg" muted loop playsinline preload="auto" poster="CAM17-Portrait-Poster.jpg" src="CAM17-Portrait.mp4"></video>
+      <video class="bg" muted loop playsinline preload="auto" poster="Scenes/CAM17-Portrait-Poster.jpg" src="Scenes/CAM17-Portrait.mp4"></video>
       <div class="scrim"></div>
       <div class="copy">
         <h2>Above it all</h2>
@@ -101,8 +102,8 @@
 
     <!-- 8. COURTYARD — swipe sideways from day to night -->
     <section class="scene" id="scene-courtyard" data-n="8">
-      <video class="bg" id="courtyard-day" muted loop playsinline preload="auto" poster="CAM15-Day-Portrait-Poster.jpg" src="CAM15-Day-Portrait.mp4"></video>
-      <video class="bg bg-overlay" id="courtyard-night" muted loop playsinline preload="auto" poster="CAM15-Day-Night-Poster.jpg" src="CAM15-Day-Night.mp4"></video>
+      <video class="bg" id="courtyard-day" muted loop playsinline preload="auto" poster="Scenes/CAM15-Day-Portrait-Poster.jpg" src="Scenes/CAM15-Day-Portrait.mp4"></video>
+      <video class="bg bg-overlay" id="courtyard-night" muted loop playsinline preload="auto" poster="Scenes/CAM15-Day-Night-Poster.jpg" src="Scenes/CAM15-Day-Night.mp4"></video>
       <div class="scrim"></div>
       <div class="copy copy-raised">
         <h2>An open court, day into evening</h2>
@@ -112,29 +113,94 @@
     </section>
 
     <!-- 9. FLOOR PLANS -->
-    <section class="scene plans" id="scene-plans" data-n="9">
-      <img draggable="false" class="bg" src="CAM60-Type%20A2-Front-Night-Poster.jpg" alt="">
-      <div class="scrim"></div>
-      <div class="copy">
-        <h2>Every room, considered</h2>
-        <p>Three levels, from garden to sky.</p>
+    <section class="scene plans" id="scene-plans" data-n="9" data-time="day">
+      <!-- The courtyard behind, blurred: day or night, whichever the courtyard was left on. -->
+      <img draggable="false" class="bg plans-bg plans-bg-day" src="Scenes/Plans%20Background%20-%20Day.jpg" alt="">
+      <img draggable="false" class="bg plans-bg plans-bg-night" src="Scenes/Plans%20Background%20-%20Night.jpg" alt="">
+      <div class="plans-shade"></div>
+      <div class="floors">
+        <article class="floor" id="floor-0" role="tabpanel" aria-labelledby="floor-tab-0" aria-label="Ground Floor">
+          <div class="floor-num" aria-hidden="true">01</div>
+          <div class="copy plan-head">
+            <div class="kicker">Type A · Floor Plans</div>
+            <h2>Ground Floor</h2>
+            <div class="plan-meta"><span><b>≈ 157 m²</b> floor area</span><span class="sep"></span><span>12 rooms</span></div>
+          </div>
+          <div class="floor-body">
+            <div class="floor-plan"><img draggable="false" src="Scenes/Plan%20-%20Ground%20Floor.png" alt="Ground Floor plan"></div>
+            <ul class="rooms">
+              <li><b>Majlis</b><i>4.00 × 3.60 m</i></li>
+              <li><b>Living Room</b><i>4.90 × 3.40 m</i></li>
+              <li><b>Family Dining</b><i>4.90 × 3.35 m</i></li>
+              <li><b>Dining Room</b><i>4.00 × 2.80 m</i></li>
+              <li><b>Kitchen</b><i>3.70 × 3.40 m</i></li>
+              <li><b>Outdoor Sitting</b><i>5.60 × 3.50 m</i></li>
+              <li><b>Formal Entrance</b><i>2.25 × 1.75 m</i></li>
+              <li><b>Driver’s Room</b><i>2.65 × 2.10 m</i></li>
+            </ul>
+          </div>
+        </article>
+        <article class="floor" id="floor-1" role="tabpanel" aria-labelledby="floor-tab-1" aria-label="First Floor" aria-hidden="true" inert>
+          <div class="floor-num" aria-hidden="true">02</div>
+          <div class="copy plan-head">
+            <div class="kicker">Type A · Floor Plans</div>
+            <h2>First Floor</h2>
+            <div class="plan-meta"><span><b>≈ 150 m²</b> floor area</span><span class="sep"></span><span>8 rooms</span></div>
+          </div>
+          <div class="floor-body">
+            <div class="floor-plan"><img draggable="false" src="Scenes/Plan%20-%20First%20Floor.png" alt="First Floor plan"></div>
+            <ul class="rooms">
+              <li><b>Master Bedroom</b><i>4.65 × 3.60 m</i></li>
+              <li><b>Dressing Room</b><i>3.80 × 2.55 m</i></li>
+              <li><b>Master Bathroom</b><i>3.65 × 2.00 m</i></li>
+              <li><b>Bedroom 1</b><i>3.60 × 3.60 m</i></li>
+              <li><b>Bedroom 2</b><i>3.80 × 3.70 m</i></li>
+              <li><b>Living Room</b><i>4.00 × 3.60 m</i></li>
+              <li><b>Bathroom</b><i>2.40 × 1.60 m</i></li>
+              <li><b>Terrace</b><i>1.85 × 1.50 m</i></li>
+            </ul>
+          </div>
+        </article>
+        <article class="floor" id="floor-2" role="tabpanel" aria-labelledby="floor-tab-2" aria-label="Roof Floor" aria-hidden="true" inert>
+          <div class="floor-num" aria-hidden="true">03</div>
+          <div class="copy plan-head">
+            <div class="kicker">Type A · Floor Plans</div>
+            <h2>Roof Floor</h2>
+            <div class="plan-meta"><span><b>≈ 79 m²</b> floor area</span><span class="sep"></span><span>5 rooms</span></div>
+          </div>
+          <div class="floor-body">
+            <div class="floor-plan"><img draggable="false" src="Scenes/Plan%20-%20Roof%20Floor.png" alt="Roof Floor plan"></div>
+            <ul class="rooms">
+              <li><b>Multi-Purpose Room</b><i>3.70 × 3.45 m</i></li>
+              <li><b>Terrace</b><i>4.75 × 3.60 m</i></li>
+              <li><b>Service Terrace</b><i>5.30 × 3.55 m</i></li>
+              <li><b>Maid’s Room</b><i>3.70 × 2.10 m</i></li>
+              <li><b>Laundry</b><i>1.80 × 1.60 m</i></li>
+              <li><b>Bathroom</b><i>2.40 × 1.50 m</i></li>
+              <li><b>Bathroom</b><i>1.80 × 1.60 m</i></li>
+            </ul>
+          </div>
+        </article>
       </div>
-      <div class="list">
-        <div><em>01</em><span>Ground floor</span></div>
-        <div><em>02</em><span>First floor</span></div>
-        <div><em>03</em><span>Roof terrace</span></div>
+      <div class="floor-rail" role="tablist" aria-label="Floors">
+        <button class="floor-tab on" id="floor-tab-0" role="tab" aria-selected="true" aria-controls="floor-0" tabindex="0" data-floor="0">Ground</button>
+        <button class="floor-tab" id="floor-tab-1" role="tab" aria-selected="false" aria-controls="floor-1" tabindex="-1" data-floor="1">First</button>
+        <button class="floor-tab" id="floor-tab-2" role="tab" aria-selected="false" aria-controls="floor-2" tabindex="-1" data-floor="2">Roof</button>
       </div>
-      <div class="soon">Plans unveiling soon</div>
     </section>
 
     <!-- 10. CLOSING -->
-    <section class="scene" id="scene-closing" data-n="10">
-      <video class="bg" muted loop playsinline preload="auto" poster="CAM60-Type%20A2-Front-Night-Poster.jpg" src="CAM60-Type%20A2-Front-Night.mp4"></video>
+    <section class="scene" id="scene-closing" data-n="10" data-time="sunset">
+      <video class="bg" muted loop playsinline preload="auto" poster="Scenes/CAM60-Type%20A2-Front-Night-Poster.jpg" src="Scenes/CAM60-Type%20A2-Front-Night.mp4"></video>
+      <!-- Sunset sits over the night video; a swipe down fades it away in place. -->
+      <img draggable="false" class="bg closing-sunset" src="Scenes/CAM60-Type%20A2-Front-Sunset.jpg" alt="">
       <div class="scrim"></div>
       <div class="copy">
         <h2>Ewan Sedra</h2>
         <p>A home designed to be lived in slowly.</p>
+        <button class="back-to-types" type="button"><span class="arrow" aria-hidden="true">←</span><span>Back to types</span></button>
       </div>
+      <div class="drag-hint drag-hint-vertical" aria-hidden="true"><svg viewBox="0 0 24 64" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6-6 6 6"/><path d="M6 55l6 6 6-6"/><circle class="dot" cx="12" cy="32" r="4.5" fill="currentColor" stroke="none"/></svg></div>
     </section>
 
   </div>

@@ -33,6 +33,10 @@ img { max-width: none; -webkit-user-drag: none; user-select: none; }
 }
 #journey:not([hidden]) { display: contents; }
 
+/* Brief fade to black used when jumping back to the types page. */
+#jump-veil { position: fixed; inset: 0; z-index: 500; background: #0b0a08; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+#jump-veil.on { opacity: 1; pointer-events: auto; }
+
 /* ---------- progress rail ---------- */
 #progress-rail {
   position: fixed;
@@ -229,24 +233,156 @@ body.in-transition #progress-fill { transition: transform 0.55s linear; }
 #scene-interior .copy, #scene-courtyard .copy { pointer-events: none; }
 
 /* ---------- 9. floor plans ---------- */
-.plans > .bg { filter: brightness(.42) saturate(.85); }
-.plans .scrim { background: linear-gradient(to bottom, rgba(12,11,8,.35) 0%, rgba(12,11,8,.1) 40%, rgba(12,11,8,.45) 100%); }
-.plans .copy { bottom: auto; top: 20%; }
-.list { position: absolute; left: 24px; right: 24px; top: 47%; z-index: 3; }
-.list div { display: flex; align-items: baseline; gap: 14px; padding: 14px 0; border-top: 1px solid rgba(251,246,236,.22); }
-.list div:last-child { border-bottom: 1px solid rgba(251,246,236,.22); }
-.list em { font: 500 9px/1 var(--sans); font-style: normal; letter-spacing: .2em; color: var(--accent); }
-.list span { font: 400 17px/1 var(--serif); }
-.soon {
+/* Three floors side by side; a sideways swipe snaps to the next one. */
+.plans { background: #0d0e10; }
+.plans-bg-night { opacity: 0; transition: opacity .6s ease; }
+.plans[data-time="night"] .plans-bg-night { opacity: 1; }
+.plans.instant .plans-bg-night { transition: none; }
+.plans-shade {
   position: absolute;
-  left: 24px; right: 24px;
-  top: calc(47% + 158px);
-  z-index: 3;
-  font: 500 9px/1.5 var(--sans);
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  color: var(--accent);
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(18,15,11,.6) 0%, rgba(18,15,11,.2) 26%, rgba(18,15,11,.16) 55%, rgba(18,15,11,.42) 80%, rgba(18,15,11,.8) 100%);
 }
+.plans[data-time="night"] .plans-shade {
+  background: linear-gradient(180deg, rgba(8,9,12,.78) 0%, rgba(8,9,12,.4) 24%, rgba(8,9,12,.34) 55%, rgba(8,9,12,.55) 78%, rgba(8,9,12,.86) 100%);
+}
+.floors {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  transition: transform .45s cubic-bezier(.22,.61,.36,1);
+}
+.floor {
+  position: relative;
+  flex: 0 0 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: calc(52px + env(safe-area-inset-top)) 0 calc(96px + env(safe-area-inset-bottom));
+}
+.floor-num {
+  position: absolute;
+  right: 16px;
+  top: calc(26px + env(safe-area-inset-top));
+  font: 400 132px/1 var(--serif);
+  color: rgba(251,246,236,.1);
+  pointer-events: none;
+}
+.copy.plan-head { position: relative; left: auto; right: auto; bottom: auto; margin: 0 24px; }
+.plan-head .kicker { font: 500 11px/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+.plan-head h2 { margin-top: 10px; }
+.plan-meta {
+  margin-top: 10px;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  font: 400 11px/1.3 var(--sans);
+  letter-spacing: .04em;
+  color: rgba(251,246,236,.78);
+}
+.plan-meta b { font: 400 16px/1 var(--serif); letter-spacing: 0; color: var(--cream); margin-right: 4px; }
+.plan-meta .sep { width: 1px; height: 12px; background: rgba(251,246,236,.3); align-self: center; }
+/* Plan and room list share one centre line, so the plan sits level with its list and in
+   exactly the same place on every floor (all three images share one frame). */
+.floor-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px 0 12px;
+}
+.floor-plan { flex: 0 0 50%; height: 100%; display: flex; align-items: center; }
+.floor-plan img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 18px 30px rgba(0,0,0,.55)); pointer-events: none; }
+.rooms { flex: 1; min-width: 0; list-style: none; margin: 0; padding: 0; text-shadow: 0 1px 10px rgba(0,0,0,.6); }
+.rooms li { padding: clamp(6px, 1.45vh, 12px) 0; border-bottom: 1px solid rgba(251,246,236,.16); }
+.rooms li:first-child { border-top: 1px solid rgba(251,246,236,.16); }
+.rooms b { display: block; font: 400 15px/1.2 var(--serif); color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rooms i { display: block; margin-top: 3px; font: 400 11px/1.2 var(--sans); font-style: normal; letter-spacing: .03em; color: rgba(251,246,236,.66); }
+.floor-rail {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(26px + env(safe-area-inset-bottom));
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+}
+.floor-tab {
+  flex: 1;
+  position: relative;
+  padding: 14px 0 12px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: 500 11px/1 var(--sans);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: rgba(251,246,236,.52);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition: color .3s ease;
+}
+.floor-tab:nth-child(2) { text-align: center; }
+.floor-tab:last-child { text-align: right; }
+.floor-tab::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(251,246,236,.24); transition: background-color .3s ease; }
+.floor-tab.on { color: var(--cream); }
+.floor-tab.on::after { background: var(--accent); }
+.floor-tab:focus { outline: none; }
+.floor-tab:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .floors { transition: none; } }
+/* Short phones (e.g. iPhone SE): tighten the header and the list so nothing crowds. */
+@media (max-height: 700px) {
+  .floor { padding-top: calc(36px + env(safe-area-inset-top)); padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .floor-num { font-size: 104px; top: calc(18px + env(safe-area-inset-top)); }
+  .plan-head h2 { font-size: 26px; margin-top: 8px; }
+  .plan-meta { margin-top: 6px; }
+  .floor-body { padding-top: 22px; }
+  .rooms li { padding: 5px 0; }
+  .rooms b { font-size: 14px; }
+  .rooms i { margin-top: 2px; }
+}
+
+/* ---------- 10. closing: sunset into night ---------- */
+.closing-sunset { transition: opacity .9s ease; }
+#scene-closing[data-time="night"] .closing-sunset { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .closing-sunset { transition: none; } }
+/* Resetting to sunset while the page is off screen: no fade. */
+#scene-closing.instant .closing-sunset, #scene-closing.instant .drag-hint-vertical { transition: none; }
+/* Up/down sign beside the text on the sunset view; it goes once night is showing. */
+#scene-closing .drag-hint-vertical { left: auto; right: 18px; bottom: calc(52px + env(safe-area-inset-bottom)); transition: opacity .5s ease; }
+#scene-closing .drag-hint-vertical svg { width: 24px; height: 64px; }
+#scene-closing .drag-hint-vertical .dot { animation-name: hint-rise; }
+@keyframes hint-rise {
+  0%, 100% { transform: translateY(11px); }
+  50% { transform: translateY(-11px); }
+}
+#scene-closing[data-time="night"] .drag-hint-vertical { opacity: 0; }
+
+.back-to-types {
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  font: 500 11px/1 var(--sans);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--cream);
+  /* Gold-edged card, same family as the Type buttons. */
+  padding: 16px 22px;
+  background: rgba(15,14,11,.5);
+  border: 1px solid rgba(201,171,119,.55);
+  border-radius: 4px;
+  transition: transform .12s ease, filter .12s ease, background-color .25s ease;
+}
+.back-to-types:active { transform: scale(.97); filter: brightness(1.25); }
+.back-to-types:focus { outline: none; }
+.back-to-types:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+.back-to-types .arrow { font-size: 14px; letter-spacing: 0; }
+
 
 /* ---------- drag sign (interior pan, courtyard day/night) ---------- */
 .drag-hint {
