@@ -127,7 +127,7 @@ function slideTo(target) {
   });
 }
 
-function playTransition(clip, target) {
+function playTransition(clip, target, parked) {
   const arrivingVideos = sceneVideos(target);
   let started = false;
   let done = false;
@@ -149,6 +149,7 @@ function playTransition(clip, target) {
   const fallBack = () => {
     started = true;
     clearTimeout(giveUp);
+    clearTimeout(hardGiveUp);
     clip.pause();
     clip.currentTime = 0;
     activeClip = null;
@@ -156,7 +157,12 @@ function playTransition(clip, target) {
   };
 
   // If the clip can't start in time (slow network, refused play), fall back to a normal slide.
-  const giveUp = setTimeout(() => { if (!started) fallBack(); }, TRANSITION_START_TIMEOUT_MS);
+  // Counted from the settle, not from the swipe, so the settle never spends this budget.
+  let giveUp = 0;
+  const armGiveUp = () => { giveUp = setTimeout(() => { if (!started) fallBack(); }, TRANSITION_START_TIMEOUT_MS); };
+  if (parked) parked.then(armGiveUp); else armGiveUp();
+  // Absolute limit, in case the settle itself never reports back.
+  const hardGiveUp = setTimeout(() => { if (!started) fallBack(); }, 700);
 
   // Show the clip only once its own first frame is on screen. Revealing it mid-motion
   // (which is what happens on a cold load, while the decoder is still catching up)
@@ -165,6 +171,7 @@ function playTransition(clip, target) {
       if (started) return;
       started = true;
       clearTimeout(giveUp);
+      clearTimeout(hardGiveUp);
       clip.classList.add('playing');
       document.body.classList.add('in-transition');
       // Freeze the scene being left the moment the blend starts: its own camera is
@@ -191,10 +198,21 @@ function playTransition(clip, target) {
       setTimeout(finish, ((clip.duration || 6) + 1.5) * 1000);
   };
 
+  // Hold the clip back until the scene it is leaving has settled onto its first frame,
+  // which is the frame the clip starts on. Capped, so a slow settle never stalls a swipe.
+  const whenParked = cb => {
+    if (!parked) return cb();
+    let fired = false;
+    const once = () => { if (!fired) { fired = true; cb(); } };
+    parked.then(once);
+    setTimeout(once, 260);
+  };
+  const revealWhenReady = () => whenParked(startFromFirstFrame);
+
   clip.pause();
-  if (clip.readyState >= 2 && clip.currentTime === 0) startFromFirstFrame();
+  if (clip.readyState >= 2 && clip.currentTime === 0) revealWhenReady();
   else {
-    clip.addEventListener('seeked', () => onFirstFrame(clip, startFromFirstFrame), { once: true });
+    clip.addEventListener('seeked', () => onFirstFrame(clip, revealWhenReady), { once: true });
     clip.currentTime = 0;
     // A clip with nothing decoded yet never fires 'seeked'; wait for data instead.
     if (clip.readyState < 2) clip.addEventListener('loadeddata', () => { clip.currentTime = 0; }, { once: true });
@@ -205,14 +223,18 @@ function goTo(index) {
   const scenes = visibleScenes();
   const target = scenes[Math.max(0, Math.min(index, scenes.length - 1))];
   const from = activeScene;
-  if (paging || !target || target === from) return;
+  if (paging || !target || target === from) {
+    if (from.resumeAfterPark) from.resumeAfterPark();
+    return;
+  }
   activeScene = target;
   updateNativeGestures();
   setActive(target);
   paging = true;
 
+  const parked = from.parkOnFirstFrame ? from.parkOnFirstFrame() : null;
   const clip = document.getElementById(TRANSITIONS[from.id + '>' + target.id] || '');
-  if (clip) playTransition(clip, target);
+  if (clip) playTransition(clip, target, parked);
   else slideTo(target);
 }
 
@@ -232,11 +254,16 @@ scroller.addEventListener('touchmove', e => {
   const dx = touch.x - t.clientX;
   const dy = touch.y - t.clientY;
   // Sideways drags belong to the interior pan and the courtyard day/night swipe.
+  if (!paging && Math.abs(dy) > 6 && Math.abs(dy) > Math.abs(dx) && activeScene.parkOnFirstFrame) activeScene.parkOnFirstFrame();
   if (Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx) * 1.2) return;
   touch.fired = true;
   step(dy > 0 ? 1 : -1);
 }, { passive: true });
-scroller.addEventListener('touchend', () => { touch = null; }, { passive: true });
+scroller.addEventListener('touchend', () => {
+  // Finger lifted without changing scene: put the scene's move back.
+  if (touch && !touch.fired && activeScene.resumeAfterPark) activeScene.resumeAfterPark();
+  touch = null;
+}, { passive: true });
 
 // Mouse wheel / trackpad: one scene per gesture, ignoring the trailing inertia.
 let wheelLockUntil = 0;
@@ -528,6 +555,81 @@ tabs.forEach(tab => {
       else if (fingerSpeed > 0.25) settleTo(0);
       else settleTo(amount > 0.5 ? 1 : 0);
     },
+  });
+})();
+
+// ---- park the scenes a transition starts from on their first frame ----
+// Measured with ffmpeg: each transition clip begins on its scene video's FIRST frame.
+// Those videos used to loop, so by the time a swipe came the camera had travelled and
+// the join showed as a slide. Now each plays its move once on arrival, then dissolves
+// back to its first frame (the poster still, which matches it) and holds there.
+(function parkSceneVideos() {
+  ['scene-facade-day', 'scene-facade-close', 'scene-entrance'].forEach(id => {
+    const scene = document.getElementById(id);
+    const video = scene && scene.querySelector('video.bg');
+    if (!video || !video.poster) return;
+    video.loop = false;
+
+    const still = document.createElement('img');
+    still.className = 'bg bg-still';
+    still.alt = '';
+    still.draggable = false;
+    still.src = video.poster;
+    video.insertAdjacentElement('afterend', still);
+
+    let settling = 0;
+    // Cover with the still, rewind behind it, then drop the still once the rewind has
+    // really landed — the picture underneath is then the same frame.
+    const settle = (fadeMs, onSettled) => {
+      clearTimeout(settling);
+      still.style.transitionDuration = fadeMs + 'ms';
+      still.style.opacity = '1';
+      settling = setTimeout(() => {
+        video.pause();
+        // Covered now, so the transition need not wait for the rewind as well.
+        if (onSettled) onSettled();
+        const drop = () => { still.style.opacity = '0'; };
+        if (video.currentTime === 0) drop();
+        else {
+          video.addEventListener('seeked', drop, { once: true });
+          video.currentTime = 0;
+          // If the seek never reports back, don't leave the still up for ever.
+          setTimeout(drop, 600);
+        }
+      }, fadeMs + 40);
+    };
+
+    // Called the moment a swipe starts: the clip about to play begins on this video's
+    // first frame, so the scene must be showing that frame, not wherever its camera
+    // has travelled to.
+    // Returns a promise that settles once the scene really is on its first frame,
+    // so the transition can hold the clip back until then.
+    let parking = null;
+    scene.parkOnFirstFrame = () => {
+      if (video.paused && video.currentTime === 0) return Promise.resolve();
+      if (!parking) parking = new Promise(done => settle(90, done));
+      return parking;
+    };
+    // A drag that doesn't change scene puts the move back.
+    scene.resumeAfterPark = () => {
+      parking = null;
+      // Always drop a settle that has been scheduled but not run, or the video pauses
+      // a moment after the finger has gone and stays parked.
+      clearTimeout(settling);
+      if (!scene.classList.contains('is-active')) return;
+      still.style.opacity = '0';
+      if (video.paused) video.play().catch(() => {});
+    };
+
+    video.addEventListener('ended', () => settle(500));
+
+    scene.addEventListener('scene:enter', () => {
+      parking = null;
+      clearTimeout(settling);
+      still.style.opacity = '0';
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    });
   });
 })();
 

@@ -83,6 +83,8 @@ body.in-transition #progress-fill { transition: transform 0.55s linear; }
   object-fit: cover;
 }
 .bg-overlay { opacity: 0; pointer-events: none; }
+/* Still of a scene video's first frame, used to settle back onto it without a cut. */
+.bg-still { opacity: 0; pointer-events: none; transition: opacity .18s linear; }
 
 .scrim {
   position: absolute;
