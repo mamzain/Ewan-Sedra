@@ -39,15 +39,21 @@ function warmTransitionClips() {
   // Each listener below is `once` on its own, so guard against the other two firing later.
   if (clipsWarmed) return;
   clipsWarmed = true;
-  for (const id of new Set(Object.values(TRANSITIONS))) {
-    const clip = document.getElementById(id);
-    if (!clip) continue;
+  const ids = [...new Set(Object.values(TRANSITIONS))];
+  (function warmNext(i) {
+    const clip = document.getElementById(ids[i]);
+    if (!clip) return i + 1 < ids.length && warmNext(i + 1);
+    const next = () => { if (i + 1 < ids.length) warmNext(i + 1); };
+    // Never nudge a clip while a transition is running: a warm-up play() landing on the
+    // clip being revealed would start it moving before its first frame is on screen.
+    if (activeClip || paging) return setTimeout(() => warmNext(i), 400);
     if (clip.readyState < 2) clip.load();
+    // Nudge it into decoding, then park it back on frame one and warm the next.
     clip.play().then(() => {
-      // Leave it running only if a transition started using this exact clip meanwhile.
       if (clip !== activeClip) { clip.pause(); clip.currentTime = 0; }
-    }).catch(() => {});
-  }
+      setTimeout(next, 120);
+    }).catch(() => setTimeout(next, 120));
+  })(0);
 }
 ['touchstart', 'pointerdown', 'keydown'].forEach(evt =>
   window.addEventListener(evt, warmTransitionClips, { once: true, passive: true })
@@ -133,7 +139,7 @@ function playTransition(clip, target) {
     arrivingVideos.forEach(v => v.play().catch(() => {}));
     clip.classList.remove('playing');
     // Pause only after the dissolve, so the clip holds its last frame while fading out.
-    setTimeout(() => { if (activeClip !== clip) clip.pause(); }, TRANSITION_FADE_MS);
+    setTimeout(() => { if (activeClip !== clip) { clip.pause(); clip.currentTime = 0; } }, TRANSITION_FADE_MS);
     // Safe to drop now: the bar's glide already under way keeps its original timing.
     document.body.classList.remove('in-transition');
     activeClip = null;
@@ -144,6 +150,7 @@ function playTransition(clip, target) {
     started = true;
     clearTimeout(giveUp);
     clip.pause();
+    clip.currentTime = 0;
     activeClip = null;
     slideTo(target);
   };
@@ -151,14 +158,21 @@ function playTransition(clip, target) {
   // If the clip can't start in time (slow network, refused play), fall back to a normal slide.
   const giveUp = setTimeout(() => { if (!started) fallBack(); }, TRANSITION_START_TIMEOUT_MS);
 
-  clip.currentTime = 0;
-  clip.play()
-    .then(() => onFirstFrame(clip, () => {
+  // Show the clip only once its own first frame is on screen. Revealing it mid-motion
+  // (which is what happens on a cold load, while the decoder is still catching up)
+  // reads as the camera sliding at the join.
+  const startFromFirstFrame = () => {
       if (started) return;
       started = true;
       clearTimeout(giveUp);
       clip.classList.add('playing');
       document.body.classList.add('in-transition');
+      // If the phone refuses to start it after all, jump the page across and clear up,
+      // rather than leaving a frozen frame on screen.
+      clip.play().catch(() => {
+        scroller.scrollTop = target.offsetTop;
+        finish();
+      });
       // Once the clip fully covers the screen, move the page behind it, park the
       // arriving scene's video on its first frame, and pause the scene left behind.
       setTimeout(() => {
@@ -171,8 +185,16 @@ function playTransition(clip, target) {
       clip.addEventListener('ended', finish, { once: true });
       // Safety net in case 'ended' never arrives (e.g. the tab is backgrounded).
       setTimeout(finish, ((clip.duration || 6) + 1.5) * 1000);
-    }))
-    .catch(() => { if (!started) fallBack(); });
+  };
+
+  clip.pause();
+  if (clip.readyState >= 2 && clip.currentTime === 0) startFromFirstFrame();
+  else {
+    clip.addEventListener('seeked', () => onFirstFrame(clip, startFromFirstFrame), { once: true });
+    clip.currentTime = 0;
+    // A clip with nothing decoded yet never fires 'seeked'; wait for data instead.
+    if (clip.readyState < 2) clip.addEventListener('loadeddata', () => { clip.currentTime = 0; }, { once: true });
+  }
 }
 
 function goTo(index) {
