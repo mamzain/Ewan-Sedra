@@ -4,6 +4,7 @@ const progressFill = document.getElementById('progress-fill');
 const journey = document.getElementById('journey');
 const scroller = document.getElementById('scroller');
 const masterplanScene = document.getElementById('scene-masterplan');
+const { createArrivalCoordinator, createWarmCoordinator } = window.TransitionCoordination;
 
 // ---- one-swipe paging ----
 // A short swipe immediately animates a full scene, instead of the browser's own drag-then-settle.
@@ -51,6 +52,11 @@ let activeScene = document.getElementById('scene-logo');
 // Warm each clip's decoder on the visitor's first touch or click, so its first
 // frame appears instantly on swipe. iOS often skips preloading until a gesture.
 let clipsWarmed = false;
+const warmCoordinator = createWarmCoordinator({
+  getClip: id => document.getElementById(id),
+  isBusy: () => !!activeClip || paging,
+  shouldPark: clip => clip !== activeClip,
+});
 function warmTransitionClips() {
   // Needs one touch first (iOS); after that every arrival warms its own clips.
   clipsWarmed = true;
@@ -58,20 +64,7 @@ function warmTransitionClips() {
     .filter(([key]) => key.startsWith(activeScene.id + '>'))
     .map(([, id]) => id);
   if (!ids.length) return;
-  (function warmNext(i) {
-    const clip = document.getElementById(ids[i]);
-    if (!clip) return i + 1 < ids.length && warmNext(i + 1);
-    const next = () => { if (i + 1 < ids.length) warmNext(i + 1); };
-    // Never nudge a clip while a transition is running: a warm-up play() landing on the
-    // clip being revealed would start it moving before its first frame is on screen.
-    if (activeClip || paging) return setTimeout(() => warmNext(i), 400);
-    if (clip.readyState < 2) clip.load();
-    // Nudge it into decoding, then park it back on frame one and warm the next.
-    clip.play().then(() => {
-      if (clip !== activeClip) { clip.pause(); clip.currentTime = 0; }
-      setTimeout(next, 120);
-    }).catch(() => setTimeout(next, 120));
-  })(0);
+  warmCoordinator.schedule(ids);
 }
 ['touchstart', 'pointerdown', 'keydown'].forEach(evt =>
   window.addEventListener(evt, warmTransitionClips, { once: true, passive: true })
@@ -122,13 +115,17 @@ function pauseOtherVideos(target) {
 
 // Marks the scene as current: text rises in, the progress rail shows its number
 // out of 10, and scene-specific code hears 'scene:enter'.
-function setActive(target) {
+function enterScene(target) {
+  target.dispatchEvent(new CustomEvent('scene:enter'));
+}
+
+function setActive(target, { deferEnter = false } = {}) {
   scroller.querySelectorAll('.scene.is-active').forEach(s => { if (s !== target) s.classList.remove('is-active'); });
   target.classList.add('is-active');
   progressFill.style.transform = 'scaleX(' + (+target.dataset.n || 0) / 10 + ')';
   // Load first: an arrival handler may ask a video to play, and a later load() would cancel that.
   primeAround(target);
-  target.dispatchEvent(new CustomEvent('scene:enter'));
+  if (!deferEnter) enterScene(target);
   // Once the transition or slide has really finished, decode the clips that can play next.
   const warmWhenSettled = () => {
     if (activeScene !== target || !clipsWarmed) return;
@@ -161,6 +158,7 @@ function slideTo(target) {
 
 function playTransition(clip, target, parked) {
   const arrivingVideos = sceneVideos(target);
+  const arrival = createArrivalCoordinator({ enter: () => enterScene(target) });
   let started = false;
   let done = false;
   const finished = new AbortController();
@@ -171,7 +169,7 @@ function playTransition(clip, target, parked) {
     done = true;
     finished.abort();
     clip.classList.remove('playing');
-    setTimeout(() => arrivingVideos.forEach(v => v.play().catch(() => {})), TRANSITION_FADE_MS);
+    arrival.afterTransition(TRANSITION_FADE_MS);
     // Pause only after the dissolve, so the clip holds its last frame while fading out.
     setTimeout(() => { if (activeClip !== clip) { clip.pause(); clip.currentTime = 0; } }, TRANSITION_FADE_MS);
     // Safe to drop now: the bar's glide already under way keeps its original timing.
@@ -189,6 +187,7 @@ function playTransition(clip, target, parked) {
     clip.pause();
     clip.currentTime = 0;
     activeClip = null;
+    arrival.enterNow();
     slideTo(target);
   };
 
@@ -298,14 +297,15 @@ function goTo(index) {
     void target.offsetWidth;
     requestAnimationFrame(() => target.classList.remove('instant'));
   }
+  const clip = document.getElementById(TRANSITIONS[from.id + '>' + target.id] || '');
+  warmCoordinator.cancel();
   activeScene = target;
   updateNativeGestures();
-  setActive(target);
+  setActive(target, { deferEnter: !!clip });
   paging = true;
 
   if (from.leaveHook) from.leaveHook();
   const parked = from.parkOnFirstFrame ? from.parkOnFirstFrame() : null;
-  const clip = document.getElementById(TRANSITIONS[from.id + '>' + target.id] || '');
   if (clip) playTransition(clip, target, parked);
   else slideTo(target);
 }
