@@ -21,7 +21,23 @@ const TRANSITIONS = {
   'scene-interior>scene-entrance': 't3-rev',
 };
 // If the clip hasn't shown a frame this quickly, slide instead so the swipe never waits.
-const TRANSITION_START_TIMEOUT_MS = 300;
+// How long a clip may take to start before a plain slide is used instead. While it waits the
+// screen shows the matching still frame, so waiting costs only a moment's delay.
+const TRANSITION_START_TIMEOUT_MS = 900;
+
+// Visit the site with ?debug to see, on the phone itself, what each transition did.
+const DEBUG = /[?&]debug\b/.test(location.search);
+function debugLog(text) {
+  if (!DEBUG) return;
+  let box = document.getElementById('debug-log');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'debug-log';
+    box.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top));z-index:9999;font:11px/1.35 monospace;color:#fff;background:rgba(0,0,0,.72);padding:6px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap';
+    document.body.appendChild(box);
+  }
+  box.textContent = (text + '\n' + box.textContent).split('\n').slice(0, 8).join('\n');
+}
 const TRANSITION_FADE_MS = 210; // just over the 0.2s CSS dissolve on .transition-video
 
 let paging = false;
@@ -97,18 +113,6 @@ function primeAround(scene) {
   });
 }
 
-function onFirstFrame(video, cb) {
-  if ('requestVideoFrameCallback' in video) video.requestVideoFrameCallback(() => cb());
-  else {
-    // No frame signal: wait until a frame is ready; stop if the video gets paused.
-    const check = () => {
-      if (video.paused) return;
-      if (video.readyState >= 2) cb();
-      else setTimeout(check, 30);
-    };
-    setTimeout(check, 30);
-  }
-}
 
 // Only the scene on screen decodes its video, so phones never run several at once.
 function pauseOtherVideos(target) {
@@ -159,11 +163,13 @@ function playTransition(clip, target, parked) {
   const arrivingVideos = sceneVideos(target);
   let started = false;
   let done = false;
+  const finished = new AbortController();
   activeClip = clip;
 
   const finish = () => {
     if (done) return;
     done = true;
+    finished.abort();
     clip.classList.remove('playing');
     setTimeout(() => arrivingVideos.forEach(v => v.play().catch(() => {})), TRANSITION_FADE_MS);
     // Pause only after the dissolve, so the clip holds its last frame while fading out.
@@ -174,7 +180,9 @@ function playTransition(clip, target, parked) {
     paging = false;
   };
 
-  const fallBack = () => {
+  const fallBack = reason => {
+    debugLog(clip.id + ': PLAIN SLIDE after ' + Math.round(performance.now() - swipedAt) + ' ms, ' + (reason || 'clip too slow to start') + ' (readyState ' + clip.readyState + ')');
+    listeners.abort();
     started = true;
     clearTimeout(giveUp);
     clearTimeout(hardGiveUp);
@@ -190,7 +198,9 @@ function playTransition(clip, target, parked) {
   const armGiveUp = () => { giveUp = setTimeout(() => { if (!started) fallBack(); }, TRANSITION_START_TIMEOUT_MS); };
   if (parked) parked.then(armGiveUp); else armGiveUp();
   // Absolute limit, in case the settle itself never reports back.
-  const hardGiveUp = setTimeout(() => { if (!started) fallBack(); }, 700);
+  const hardGiveUp = setTimeout(() => { if (!started) fallBack(); }, TRANSITION_START_TIMEOUT_MS + 500);
+  const swipedAt = performance.now();
+  const listeners = new AbortController();
 
   // Show the clip only once its own first frame is on screen. Revealing it mid-motion
   // (which is what happens on a cold load, while the decoder is still catching up)
@@ -200,6 +210,8 @@ function playTransition(clip, target, parked) {
       started = true;
       clearTimeout(giveUp);
       clearTimeout(hardGiveUp);
+      listeners.abort();
+      debugLog(clip.id + ': played, started after ' + Math.round(performance.now() - swipedAt) + ' ms at clip time ' + clip.currentTime.toFixed(2) + ' s');
       clip.classList.add('playing');
       document.body.classList.add('in-transition');
       // Freeze the scene being left the moment the blend starts: its own camera is
@@ -221,7 +233,7 @@ function playTransition(clip, target, parked) {
           if (arrivingVideos.includes(v)) v.currentTime = 0;
         });
       }, TRANSITION_FADE_MS + 60);
-      clip.addEventListener('ended', finish, { once: true });
+      clip.addEventListener('ended', finish, { once: true, signal: finished.signal });
       // Safety net in case 'ended' never arrives (e.g. the tab is backgrounded).
       setTimeout(finish, ((clip.duration || 6) + 1.5) * 1000);
   };
@@ -235,16 +247,37 @@ function playTransition(clip, target, parked) {
     parked.then(once);
     setTimeout(once, 260);
   };
-  const revealWhenReady = () => whenParked(startFromFirstFrame);
-
-  clip.pause();
-  if (clip.readyState >= 2 && clip.currentTime === 0) revealWhenReady();
-  else {
-    clip.addEventListener('seeked', () => onFirstFrame(clip, revealWhenReady), { once: true });
-    clip.currentTime = 0;
-    // A clip with nothing decoded yet never fires 'seeked'; wait for data instead.
-    if (clip.readyState < 2) clip.addEventListener('loadeddata', () => { clip.currentTime = 0; }, { once: true });
-  }
+  // Once the scene behind has settled, start the clip from its first frame while it is still
+  // invisible, and reveal it the moment frames are actually moving. Its first few frames are
+  // blended from the scene's own frame, so revealing a frame or two in looks identical.
+  whenParked(() => {
+    if (started) return;
+    let rewound = false;
+    // Reveal only once a real frame has been drawn (a 'playing' signal alone can arrive
+    // before any picture is ready on iOS).
+    const onFrame = () => {
+      if (started) return;
+      // Started late: rewind first and wait for the next drawn frame, so nothing is shown
+      // jumping back.
+      if (clip.currentTime > 0.12 && !rewound) {
+        rewound = true;
+        try { clip.currentTime = 0; } catch (_) {}
+        return watch();
+      }
+      startFromFirstFrame();
+    };
+    const watch = () => {
+      if ('requestVideoFrameCallback' in clip) clip.requestVideoFrameCallback(onFrame);
+      else {
+        const onTime = () => { if (clip.currentTime > 0) { clip.removeEventListener('timeupdate', onTime); onFrame(); } };
+        clip.addEventListener('timeupdate', onTime, { signal: listeners.signal });
+      }
+    };
+    watch();
+    try { clip.currentTime = 0; } catch (_) {}
+    if (clip.readyState === 0) clip.load();
+    clip.play().catch(err => { if (!started) fallBack('play refused: ' + (err && err.name) + ' (Low Power Mode can cause this)'); });
+  });
 }
 
 function goTo(index) {
