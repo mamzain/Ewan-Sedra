@@ -64,7 +64,7 @@ body.in-transition #progress-fill { transition: transform 0.55s linear; }
   opacity: 0;
   pointer-events: none;
   /* Short dissolve so the scene's headline and dark overlay don't pop on or off. */
-  transition: opacity 0.12s linear;
+  transition: opacity 0.2s linear;
 }
 .transition-video.playing { opacity: 1; }
 

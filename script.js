@@ -22,7 +22,7 @@ const TRANSITIONS = {
 };
 // If the clip hasn't shown a frame this quickly, slide instead so the swipe never waits.
 const TRANSITION_START_TIMEOUT_MS = 300;
-const TRANSITION_FADE_MS = 130; // just over the 0.12s CSS dissolve on .transition-video
+const TRANSITION_FADE_MS = 210; // just over the 0.2s CSS dissolve on .transition-video
 
 let paging = false;
 let pageTl = null;
@@ -136,8 +136,8 @@ function playTransition(clip, target) {
   const finish = () => {
     if (done) return;
     done = true;
-    arrivingVideos.forEach(v => v.play().catch(() => {}));
     clip.classList.remove('playing');
+    setTimeout(() => arrivingVideos.forEach(v => v.play().catch(() => {})), TRANSITION_FADE_MS);
     // Pause only after the dissolve, so the clip holds its last frame while fading out.
     setTimeout(() => { if (activeClip !== clip) { clip.pause(); clip.currentTime = 0; } }, TRANSITION_FADE_MS);
     // Safe to drop now: the bar's glide already under way keeps its original timing.
@@ -167,6 +167,10 @@ function playTransition(clip, target) {
       clearTimeout(giveUp);
       clip.classList.add('playing');
       document.body.classList.add('in-transition');
+      // Freeze the scene being left the moment the blend starts: its own camera is
+      // still travelling, and the clip always begins at that video's first frame,
+      // so a moving picture underneath is what reads as a slide at the join.
+      scroller.querySelectorAll('video.bg').forEach(v => { if (!arrivingVideos.includes(v)) v.pause(); });
       // If the phone refuses to start it after all, jump the page across and clear up,
       // rather than leaving a frozen frame on screen.
       clip.play().catch(() => {
@@ -181,7 +185,7 @@ function playTransition(clip, target) {
           v.pause();
           if (arrivingVideos.includes(v)) v.currentTime = 0;
         });
-      }, TRANSITION_FADE_MS);
+      }, TRANSITION_FADE_MS + 60);
       clip.addEventListener('ended', finish, { once: true });
       // Safety net in case 'ended' never arrives (e.g. the tab is backgrounded).
       setTimeout(finish, ((clip.duration || 6) + 1.5) * 1000);
@@ -258,21 +262,35 @@ window.addEventListener('resize', () => {
 
 // Shared direction lock for the sideways drags: decides once per gesture, and
 // while horizontal it holds the pointer and blocks scene paging.
-function sideDrag(el, { onStart, onMove, onEnd }) {
+function sideDrag(el, { onStart, onMove, onEnd, onPress }) {
   let drag = null;
   const end = () => {
-    if (drag && drag.horizontal && onEnd) onEnd();
+    // Speed older than a few frames means the finger had already come to rest.
+    const fresh = drag && drag.lastTime && performance.now() - drag.lastTime < 80;
+    if (drag && drag.horizontal && onEnd) onEnd(fresh ? (drag.speed || 0) : 0);
     drag = null;
     sideDragActive = false;
   };
   el.addEventListener('dragstart', e => e.preventDefault());
   el.addEventListener('pointerdown', e => {
+    if (onPress) onPress();
     drag = { x: e.clientX, y: e.clientY, horizontal: null, id: e.pointerId };
   });
   el.addEventListener('pointermove', e => {
     if (!drag) return;
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
+    // Screen pixels per millisecond, smoothed, so a flick can carry on gliding.
+    const now = performance.now();
+    if (drag.lastTime) {
+      const gap = now - drag.lastTime;
+      if (gap > 0) {
+        const latest = (e.clientX - drag.lastX) / gap;
+        drag.speed = drag.speed == null ? latest : drag.speed * 0.65 + latest * 0.35;
+      }
+    }
+    drag.lastTime = now;
+    drag.lastX = e.clientX;
     if (drag.horizontal === null) {
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
       drag.horizontal = Math.abs(dx) > Math.abs(dy);
@@ -414,13 +432,39 @@ tabs.forEach(tab => {
   window.addEventListener('resize', resize);
 
   let dragStart = 0;
+  // Image pixels the view moves for one screen pixel of finger travel.
+  const perPixel = () => img.naturalHeight / (H / dpr);
+  // Glide: the view carries on after the finger lifts and slows to a stop.
+  let speed = 0, glideRaf = 0, glideTime = 0;
+  const stopGlide = () => { speed = 0; if (glideRaf) cancelAnimationFrame(glideRaf); glideRaf = 0; };
+  function glide(now) {
+    // Leaving the scene mid-glide ends it, so it never redraws over a transition.
+    if (!scene.classList.contains('is-active')) return stopGlide();
+    const step = Math.min(32, now - glideTime);
+    glideTime = now;
+    const before = target;
+    target = clamp(target + speed * step);
+    // Reaching either end of the panorama stops it dead rather than bouncing.
+    if (target === before) return stopGlide();
+    speed *= Math.pow(0.995, step);
+    kick();
+    glideRaf = Math.abs(speed) > 0.02 ? requestAnimationFrame(glide) : 0;
+  }
   sideDrag(canvas, {
-    onStart: () => { dragStart = target; },
+    onPress: stopGlide,
+    onStart: () => { stopGlide(); dragStart = target; },
     onMove: dx => {
       if (center === null || !H) return;
       // One screen pixel of drag moves the view by one image pixel at the base scale.
-      target = clamp(dragStart - dx * img.naturalHeight / (H / dpr));
+      target = clamp(dragStart - dx * perPixel());
       kick();
+    },
+    onEnd: fingerSpeed => {
+      if (center === null || !H || !fingerSpeed) return;
+      speed = -fingerSpeed * perPixel();
+      if (Math.abs(speed) < 0.05) return;
+      glideTime = performance.now();
+      glideRaf = requestAnimationFrame(glide);
     },
   });
 })();
@@ -454,11 +498,35 @@ tabs.forEach(tab => {
     night.addEventListener('playing', resync);
   }
 
+  // After the finger lifts, ease the rest of the way rather than stopping part-faded.
+  let settleRaf = 0;
+  const stopSettle = () => { if (settleRaf) cancelAnimationFrame(settleRaf); settleRaf = 0; };
+  function settleTo(end) {
+    const from = amount;
+    const started = performance.now();
+    const run = now => {
+      const t = Math.min(1, (now - started) / 450);
+      const eased = 1 - Math.pow(1 - t, 3);
+      amount = from + (end - from) * eased;
+      night.style.opacity = amount;
+      settleRaf = t < 1 ? requestAnimationFrame(run) : 0;
+    };
+    stopSettle();
+    settleRaf = requestAnimationFrame(run);
+  }
+
   sideDrag(section, {
-    onStart: () => { startAmount = amount; },
+    onPress: stopSettle,
+    onStart: () => { stopSettle(); startAmount = amount; },
     onMove: dx => {
       amount = Math.max(0, Math.min(1, startAmount - dx / (section.clientWidth * 0.6)));
       night.style.opacity = amount;
+    },
+    onEnd: fingerSpeed => {
+      // A flick decides the direction; a slow drag lands on whichever is nearer.
+      if (fingerSpeed < -0.25) settleTo(1);
+      else if (fingerSpeed > 0.25) settleTo(0);
+      else settleTo(amount > 0.5 ? 1 : 0);
     },
   });
 })();
