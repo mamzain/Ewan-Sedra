@@ -169,11 +169,11 @@ body.in-transition #progress-fill { transition: transform 0.55s linear; }
   padding: 18px 0 16px;
   font: 400 17px/1 var(--serif);
   color: rgba(251,246,236,.85);
-  background: rgba(15,14,11,.42);
+  /* A flat tint, not a frosted blur: while the text block animates in, Safari cannot
+     sample what is behind the button, so a blur visibly switches on afterwards. */
+  background: rgba(15,14,11,.5);
   border: 1px solid rgba(201,171,119,.45);
   border-radius: 4px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   /* No blue flash on tap; the press-in below is the feedback instead. */
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
