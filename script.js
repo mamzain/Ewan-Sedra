@@ -633,16 +633,14 @@ tabs.forEach(tab => {
 
 // ---- park the scenes a transition starts from on their first frame ----
 // Measured with ffmpeg: each transition clip begins on its scene video's FIRST frame.
-// Those videos used to loop, so by the time a swipe came the camera had travelled and
-// the join showed as a slide. Now each plays its move once on arrival, then dissolves
-// back to its first frame (the poster still, which matches it) and holds there.
+// These videos loop, so by the time a swipe comes the camera has travelled. The swipe
+// therefore dissolves back to the first frame (the poster still, which matches it)
+// before the clip plays, so the join never shows as a slide.
 (function parkSceneVideos() {
   ['scene-facade-day', 'scene-facade-close', 'scene-entrance'].forEach(id => {
     const scene = document.getElementById(id);
     const video = scene && scene.querySelector('video.bg');
     if (!video || !video.poster) return;
-    video.loop = false;
-
     const still = document.createElement('img');
     still.className = 'bg bg-still';
     still.alt = '';
@@ -693,8 +691,6 @@ tabs.forEach(tab => {
       still.style.opacity = '0';
       if (video.paused) video.play().catch(() => {});
     };
-
-    video.addEventListener('ended', () => settle(500));
 
     scene.addEventListener('scene:enter', () => {
       parking = null;
